@@ -5,12 +5,25 @@
 DHT dht(DHTPIN, DHTTYPE);
 
 const int N_FEATURES = 12;
-const float MEAN[N_FEATURES] = {/* μ_Temperature, μ_Humidity */};
-const float STD[N_FEATURES] = {/* σ_Temperature, σ_Humidity */};
-const float WEIGHTS[N_FEATURES] = {/* W_Temperature, W_Humidity */};
-const float BIAS = 0; /* b */
 
-float X[N_FEATURES] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0}; // Input features
+const float MEAN[N_FEATURES] = {
+  15.9531, 48.5743, 1922.8843, 667.7439, 12942.301, 19754.2505,
+  938.6319, 100.8873, 186.0739, 490.2093, 205.4578, 81.3198
+};
+
+const float STD[N_FEATURES] = {
+  14.358, 8.8212, 7755.8951, 1903.7822, 271.1686, 606.976,
+  1.3245, 925.3035, 1991.5279, 4259.4157, 2232.4848, 1095.29
+};
+
+const float WEIGHTS[N_FEATURES] = {
+  -1.1063, 1.3782, -18.2296, 5.9192, 3.3515, -7.8964,
+  -2.4279, -0.3308, -0.1946, -0.4543, -0.1843, -0.0682
+};
+
+const float BIAS = -0.3844;
+
+float X[N_FEATURES] = {20.073, 54.12,	0,	400,	12419,	18998,	939.725,	0,	0,	0,	0,	0}; // Input features
 
 void setup()
 {

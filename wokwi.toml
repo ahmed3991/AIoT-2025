@@ -1,0 +1,17 @@
+[wokwi]
+version = 1
+firmware = ".pio/build/uno/firmware.hex"
+
+[[parts]]
+type = "board"
+name = "uno"
+
+[[parts]]
+type = "dht22"
+name = "dht"
+attrs = { "temperature" = "25", "humidity" = "50" }
+
+[connections]
+"dht:VCC" = "uno:5V"
+"dht:GND" = "uno:GND"
+"dht:OUT" = "uno:2"

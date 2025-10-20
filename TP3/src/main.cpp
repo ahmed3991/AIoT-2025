@@ -1,5 +1,6 @@
-
 #include "DHT.h"
+#include <math.h>
+
 #define DHTPIN 2      // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
 DHT dht(DHTPIN, DHTTYPE);
@@ -23,12 +24,32 @@ const float WEIGHTS[N_FEATURES] = {
 
 const float BIAS = -0.3844;
 
-float X[N_FEATURES] = {20.073, 54.12,	0,	400,	12419,	18998,	939.725,	0,	0,	0,	0,	0}; // Input features
+float X[N_FEATURES] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0}; // Input features
+
+// Standardization Function 
+float standardize(float x_raw, int idx) {
+  return (x_raw - MEAN[idx]) / STD[idx];
+}
+
+// Sigmoid Function 
+float sigmoid(float z) {
+  return 1.0 / (1.0 + exp(-z));
+}
+
+// Prediction Function 
+float predict(float features[]) {
+  float z = 0.0;
+  for (int i = 0; i < N_FEATURES; i++) {
+    z += WEIGHTS[i] * features[i];
+  }
+  z += BIAS;
+  return sigmoid(z);
+}
 
 void setup()
 {
   Serial.begin(9600);
-  Serial.println(F("DHTxx test!"));
+  Serial.println(F("DHTxx test with Logistic Regression"));
   dht.begin();
 }
 
@@ -37,16 +58,13 @@ void loop()
   delay(2000);
 
   // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
   float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
   float f = dht.readTemperature(true);
 
   // add data to input array
-  X[0] = t;
-  X[1] = h;
+  X[0] = t; // Feature 0 → Temperature
+  X[1] = h; // Feature 1 → Humidity
 
   // Check if any reads failed and exit early (to try again).
   if (isnan(h) || isnan(t) || isnan(f))
@@ -55,28 +73,28 @@ void loop()
     return;
   }
 
-  // TODO: Add code to standardize the inputs
+  //  Standarization features
+  float X_scaled[N_FEATURES];
+  for (int i = 0; i < N_FEATURES; i++) {
+    X_scaled[i] = standardize(X[i], i);
+  }
 
-  // TODO: Add code to compute the output of wx + b
+  //  Prediction
+  float y_pred = predict(X_scaled);
 
-  // TODO: Add code to apply the sigmoid function
-
-  // TODO: Add code to print the result to the serial monitor
-
-  // Compute heat index in Fahrenheit (the default)
-  // float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
-  // float hic = dht.computeHeatIndex(t, h, false);
-
+  //  Output Results
   Serial.print("Humidity: ");
   Serial.print(h);
-  Serial.print("%  Tempeature: ");
+  Serial.print("%  Temperature: ");
   Serial.print(t);
-  Serial.print("°C ");
-  Serial.println(f);
-  // Serial.print(F("°F  Heat index: "));
-  // Serial.print(hic);
-  // Serial.print(F("°C "));
-  // Serial.print(hif);
-  // Serial.println(F("°F"));
+  Serial.print("°C  ");
+  Serial.print("Predicted Probability: ");
+  Serial.println(y_pred, 4);
+
+  if (y_pred >= 0.5) {
+    Serial.println("Predicted Class: 1 (Positive)");
+  } else {
+    Serial.println("Predicted Class: 0 (Negative)");
+  }
+
 }

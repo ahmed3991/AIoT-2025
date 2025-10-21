@@ -1,75 +1,109 @@
-
 #include "DHT.h"
-#define DHTPIN 2      // Digital pin connected to the DHT sensor
-#define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
+#include <math.h>
+
+#define DHTPIN 2       
+#define DHTTYPE DHT22  
 DHT dht(DHTPIN, DHTTYPE);
 
+#define MQ2_PIN A0     
+#define FLAME_PIN 3    
+
 const int N_FEATURES = 12;
-const float MEAN[N_FEATURES] = {/* μ_Temperature, μ_Humidity */};
-const float STD[N_FEATURES] = {/* σ_Temperature, σ_Humidity */};
-const float WEIGHTS[N_FEATURES] = {/* W_Temperature, W_Humidity */};
-const float BIAS = 0; /* b */
 
-float X[N_FEATURES] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0}; // Input features
+const float MEAN[N_FEATURES] = {
+  31297.363165, 1654791844.021415, 15.953115, 48.574302,
+  1922.884341, 667.743913, 12942.300974, 19754.250459,
+  938.631948, 100.887285, 186.073921, 490.209271
+};
 
-/*
-20.0,57.36,0,400
-,12306,18520,939.735,0.0
-,0.0,0.0,0.0,0.0
-*/
+const float STD[N_FEATURES] = {
+  18071.764509, 109669.276420, 14.358038, 8.821188,
+  7755.895054, 1903.782213, 271.168609, 606.975952,
+  1.324514, 925.303530, 1991.527889, 4259.415670
+};
 
-void setup()
-{
-  Serial.begin(9600);
-  Serial.println(F("DHTxx test!"));
-  dht.begin();
+const float WEIGHTS[N_FEATURES] = {
+  -1.373408, -0.342746, -0.212932, 1.180184,
+  -22.874995, 0.849484, -0.068718, -3.561514,
+  -2.865623, 1.926110, 0.944893, 2.861934
+};
+
+const float BIAS = 17.515389;
+
+float X[N_FEATURES] = {
+  20.0, 57.36, 0, 400,
+  12306, 18520, 939.735, 0.0,
+  0.0, 0.0, 0.0, 0.0
+};
+
+float standardize(float x, int idx) {
+  return (x - MEAN[idx]) / STD[idx];
 }
 
-void loop()
-{
+float sigmoid(float z) {
+  if (z > 10) z = 10;
+  if (z < -10) z = -10;
+  return 1.0 / (1.0 + exp(-z));
+}
+
+float predict(float features[]) {
+  float z = 0.0;
+  for (int i = 0; i < N_FEATURES; i++) {
+    float x_std = standardize(features[i], i);
+    z += WEIGHTS[i] * x_std;
+  }
+  z += BIAS;
+  return sigmoid(z);
+}
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println(F("🔥 Fire Detection System — Based on Professor's Model"));
+  dht.begin();
+  pinMode(MQ2_PIN, INPUT);
+  pinMode(FLAME_PIN, INPUT);
+}
+
+void loop() {
   delay(2000);
 
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
   float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  float f = dht.readTemperature(true);
 
-  // add data to input array
-  X[0] = t;
-  X[1] = h;
-
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t) || isnan(f))
-  {
-    Serial.println(F("Failed to read from DHT sensor!"));
-    return;
+  if (isnan(h) || isnan(t)) {
+    Serial.println(F("⚠️ Failed to read from DHT sensor, using previous values."));
+  } else {
+    X[0] = t;  
+    X[1] = h;  
   }
 
-  // TODO: Add code to standardize the inputs
+  int mq2_value = analogRead(MQ2_PIN);
+  int flame_value = digitalRead(FLAME_PIN);
 
-  // TODO: Add code to compute the output of wx + b
+  X[2] = mq2_value;    
+  X[3] = flame_value * 500; 
+ 
 
-  // TODO: Add code to apply the sigmoid function
+  float prob = predict(X);
 
-  // TODO: Add code to print the result to the serial monitor
+  bool alarm = false;
+  if (prob >= 0.6) {
+    if (mq2_value > 400 || flame_value == 1 || t > 45.0) {
+      alarm = true;
+    }
+  }
 
-  // Compute heat index in Fahrenheit (the default)
-  // float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
-  // float hic = dht.computeHeatIndex(t, h, false);
+  Serial.println("🌡️ Reading Sensors:");
+  Serial.print("Temperature: "); Serial.print(t); Serial.print(" °C | ");
+  Serial.print("Humidity: "); Serial.print(h); Serial.println(" %");
+  Serial.print("MQ2: "); Serial.print(mq2_value);
+  Serial.print(" | Flame: "); Serial.println(flame_value);
+  Serial.print("Predicted probability: "); Serial.println(prob, 6);
 
-  Serial.print("Humidity: ");
-  Serial.print(h);
-  Serial.print("%  Tempeature: ");
-  Serial.print(t);
-  Serial.print("°C ");
-  Serial.println(f);
-  // Serial.print(F("°F  Heat index: "));
-  // Serial.print(hic);
-  // Serial.print(F("°C "));
-  // Serial.print(hif);
-  // Serial.println(F("°F"));
+  if (alarm)
+    Serial.println("🔥 FIRE ALARM: ON");
+  else
+    Serial.println("✅ FIRE ALARM: OFF");
+
+  Serial.println("--------------------------------------------");
 }

@@ -30,16 +30,33 @@ const float WEIGHTS[N_FEATURES] = {
 
 const float BIAS = 17.515389;
 
-float X[N_FEATURES] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0}; // Input features
+float X[N_FEATURES] = {
+  20.0, 57.36, 0, 400,
+  12306, 18520, 939.735, 0.0,
+  0.0, 0.0, 0.0, 0.0
+};
 
-/*
-20.0,57.36,0,400
-,12306,18520,939.735,0.0
-,0.0,0.0,0.0,0.0
-*/
+float standardize(float x, int idx) {
+  return (x - MEAN[idx]) / STD[idx];
+}
 
-void setup()
-{
+float sigmoid(float z) {
+  if (z > 10) z = 10;
+  if (z < -10) z = -10;
+  return 1.0 / (1.0 + exp(-z));
+}
+
+float predict(float features[]) {
+  float z = 0.0;
+  for (int i = 0; i < N_FEATURES; i++) {
+    float x_std = standardize(features[i], i);
+    z += WEIGHTS[i] * x_std;
+  }
+  z += BIAS;
+  return sigmoid(z);
+}
+
+void setup() {
   Serial.begin(9600);
   Serial.println(F("🔥 Fire Detection System — Based on Professor's Model"));
   dht.begin();

@@ -1,0 +1,129 @@
+{
+    "version": 1,
+    "author": "AIoT2025-TP3",
+    "editor": "wokwi",
+    "parts": [
+        {
+            "type": "wokwi-esp32-devkit-v1",
+            "id": "esp",
+            "top": 0,
+            "left": 0,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-dht22",
+            "id": "dht1",
+            "top": -9.3,
+            "left": -111,
+            "attrs": {}
+        },
+        {
+            "type": "wokwi-led",
+            "id": "led1",
+            "top": 102,
+            "left": 186.2,
+            "attrs": {
+                "color": "red"
+            }
+        },
+        {
+            "type": "wokwi-lcd1602",
+            "id": "lcd1",
+            "top": -140,
+            "left": 200,
+            "attrs": {
+                "pins": "i2c"
+            }
+        }
+    ],
+    "connections": [
+        [
+            "esp:TX0",
+            "$serialMonitor:RX",
+            "",
+            []
+        ],
+        [
+            "esp:RX0",
+            "$serialMonitor:TX",
+            "",
+            []
+        ],
+        [
+            "dht1:GND",
+            "esp:GND.2",
+            "black",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "dht1:VCC",
+            "esp:3V3",
+            "red",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "dht1:SDA",
+            "esp:D15",
+            "green",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "led1:C",
+            "esp:GND.1",
+            "green",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "esp:D2",
+            "led1:A",
+            "green",
+            [
+                "h61.9",
+                "v-53.6",
+                "h86.4",
+                "v57.6"
+            ]
+        ],
+        [
+            "lcd1:VCC",
+            "esp:3V3",
+            "red",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "lcd1:GND",
+            "esp:GND.1",
+            "black",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "lcd1:SDA",
+            "esp:D21",
+            "green",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "lcd1:SCL",
+            "esp:D22",
+            "blue",
+            [
+                "v0"
+            ]
+        ]
+    ],
+    "dependencies": {}
+}

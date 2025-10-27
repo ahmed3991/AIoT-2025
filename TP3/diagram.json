@@ -1,50 +1,18 @@
 {
-    "version": 1,
-    "author": "AIoT2025-TP3",
-    "editor": "wokwi",
-    "parts": [
-        {
-            "type": "wokwi-arduino-uno",
-            "id": "uno",
-            "top": 0,
-            "left": 0,
-            "attrs": {}
-        },
-        {
-            "type": "wokwi-dht22",
-            "id": "dht1",
-            "top": -201.3,
-            "left": 23.4,
-            "attrs": {}
-        }
-    ],
-    "connections": [
-        [
-            "dht1:VCC",
-            "uno:5V",
-            "red",
-            [
-                "v316.8",
-                "h124.8"
-            ]
-        ],
-        [
-            "dht1:SDA",
-            "uno:2",
-            "green",
-            [
-                "v57.6",
-                "h192.1"
-            ]
-        ],
-        [
-            "dht1:GND",
-            "uno:GND.1",
-            "black",
-            [
-                "v0"
-            ]
-        ]
-    ],
-    "dependencies": {}
+  "version": 1,
+  "author": "Chaima Ferdia",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 67.8, "left": 9, "attrs": {} },
+    { "type": "wokwi-led", "id": "led1", "top": -13.2, "left": 42.2, "attrs": { "color": "red" } },
+    { "type": "wokwi-dht22", "id": "dht1", "top": -66.9, "left": 119.4, "attrs": {} }
+  ],
+  "connections": [
+    [ "dht1:VCC", "uno:5V", "red", [ "v0" ] ],
+    [ "dht1:GND", "uno:GND.1", "black", [ "v0" ] ],
+    [ "dht1:SDA", "uno:2", "green", [ "v0" ] ],
+    [ "led1:A", "uno:13", "green", [ "v0" ] ],
+    [ "led1:C", "uno:GND.1", "green", [ "v0" ] ]
+  ],
+  "dependencies": {}
 }

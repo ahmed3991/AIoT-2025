@@ -1,69 +1,84 @@
-
 #include "DHT.h"
+
+// ------------------- Sensor Setup -------------------
 #define DHTPIN 2      // Digital pin connected to the DHT sensor
-#define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
+#define DHTTYPE DHT22 // DHT 22 (AM2302)
 DHT dht(DHTPIN, DHTTYPE);
 
-const int N_FEATURES = 12;
-const float MEAN[N_FEATURES] = {/* μ_Temperature, μ_Humidity */};
-const float STD[N_FEATURES] = {/* σ_Temperature, σ_Humidity */};
-const float WEIGHTS[N_FEATURES] = {/* W_Temperature, W_Humidity */};
-const float BIAS = 0; /* b */
+// ------------------- Model Parameters -------------------
+#define N_FEATURES 2   // Two input features: temperature and humidity
 
-float X[N_FEATURES] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0}; // Input features
+const float MEAN[N_FEATURES]   = {25.125, 54.625};
+const float STD[N_FEATURES]    = {4.56720648, 9.40661337};
+const float WEIGHTS[N_FEATURES] = {0.90812293, -0.8877293};
+const float BIAS = -0.03897119;
 
-void setup()
-{
+// ------------------- Variables -------------------
+float X[N_FEATURES];  // Input vector
+
+// ------------------- Helper Functions -------------------
+
+// Standardize input features: (x - mean) / std
+void standardize(float x[], const float mean[], const float std[], int size) {
+  for (int i = 0; i < size; i++) {
+    x[i] = (x[i] - mean[i]) / std[i];
+  }
+}
+
+// Compute dot product: w · x
+float dotProduct(const float a[], const float b[], int size) {
+  float result = 0.0;
+  for (int i = 0; i < size; i++) {
+    result += a[i] * b[i];
+  }
+  return result;
+}
+
+// Sigmoid function
+float sigmoid(float z) {
+  return 1.0 / (1.0 + exp(-z));
+}
+
+// ------------------- Main Program -------------------
+void setup() {
   Serial.begin(9600);
-  Serial.println(F("DHTxx test!"));
+  Serial.println(F("DHT22 + Logistic Regression Test"));
   dht.begin();
 }
 
-void loop()
-{
+void loop() {
   delay(2000);
 
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
   float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  float f = dht.readTemperature(true);
 
-  // add data to input array
-  X[0] = t;
-  X[1] = h;
-
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t) || isnan(f))
-  {
+  if (isnan(h) || isnan(t)) {
     Serial.println(F("Failed to read from DHT sensor!"));
     return;
   }
 
-  // TODO: Add code to standardize the inputs
+  // Fill input features
+  X[0] = t;
+  X[1] = h;
 
-  // TODO: Add code to compute the output of wx + b
+  // Standardize inputs
+  standardize(X, MEAN, STD, N_FEATURES);
 
-  // TODO: Add code to apply the sigmoid function
+  // Compute model output (z = w·x + b)
+  float z = dotProduct(WEIGHTS, X, N_FEATURES) + BIAS;
 
-  // TODO: Add code to print the result to the serial monitor
+  // Apply sigmoid to get prediction between 0 and 1
+  float y_pred = sigmoid(z);
 
-  // Compute heat index in Fahrenheit (the default)
-  // float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
-  // float hic = dht.computeHeatIndex(t, h, false);
-
-  Serial.print("Humidity: ");
-  Serial.print(h);
-  Serial.print("%  Tempeature: ");
+  // ------------------- Output -------------------
+  Serial.print(F("Temperature: "));
   Serial.print(t);
-  Serial.print("°C ");
-  Serial.println(f);
-  // Serial.print(F("°F  Heat index: "));
-  // Serial.print(hic);
-  // Serial.print(F("°C "));
-  // Serial.print(hif);
-  // Serial.println(F("°F"));
+  Serial.print(F("°C | Humidity: "));
+  Serial.print(h);
+ Serial.print(F("% | Prediction: "));
+Serial.print(y_pred * 100, 1);  // multiply by 100 and show 1 decimal
+Serial.println(F("%"));
+
+
+  delay(2000);
 }

@@ -2,8 +2,10 @@
 
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <HTTPClient.h>
 #include <DHT.h>
 #include <LiquidCrystal_I2C.h>
+#include <ArduinoJson.h>
 
 #define DHTPIN 15
 #define DHTTYPE DHT22
@@ -16,6 +18,12 @@ const char *password = "";
 // MQTT broker (local machine IP)
 const char *mqtt_server = "broker.mqtt.cool"; // or your LAN IP, e.g. "192.168.1.100"
 const int mqtt_port = 1883;
+
+// Set to true to send telemetry via HTTP instead of MQTT.
+const bool USE_HTTP_TRANSPORT = false;
+const char *http_endpoint = "http://192.168.1.100:8000/infer"; // Update with your server address
+
+const char *DEVICE_ID = "esp32-aiot-demo";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -38,32 +46,76 @@ void setup_wifi()
   Serial.println("\nWiFi connected!");
 }
 
+bool applyControlPayload(const String &payload)
+{
+  StaticJsonDocument<256> doc;
+  DeserializationError error = deserializeJson(doc, payload);
+
+  bool ledOn = false;
+  bool hasValidPrediction = false;
+
+  if (!error)
+  {
+    if (doc.containsKey("prediction"))
+    {
+      float prediction = doc["prediction"].as<float>();
+      ledOn = prediction >= 0.5f;
+      hasValidPrediction = true;
+    }
+    else if (doc.containsKey("command"))
+    {
+      const char *command = doc["command"];
+      ledOn = String(command).equalsIgnoreCase("ON");
+      hasValidPrediction = true;
+    }
+  }
+
+  if (!hasValidPrediction)
+  {
+    // Fallback to plain-text commands for backward compatibility
+    String trimmed = payload;
+    trimmed.trim();
+    if (trimmed.equalsIgnoreCase("ON"))
+    {
+      ledOn = true;
+      hasValidPrediction = true;
+    }
+    else if (trimmed.equalsIgnoreCase("OFF"))
+    {
+      ledOn = false;
+      hasValidPrediction = true;
+    }
+  }
+
+  if (hasValidPrediction)
+  {
+    digitalWrite(LED_PIN, ledOn ? HIGH : LOW);
+    currentCommand = ledOn ? "ON" : "OFF";
+
+    lcd.setCursor(0, 1);
+    lcd.print("CMD:");
+    lcd.print(currentCommand);
+    lcd.print("   "); // clear any leftover characters
+
+    return true;
+  }
+
+  Serial.println("[WARN] Ignoring control message without prediction/command field");
+  return false;
+}
+
 void callback(char *topic, byte *message, unsigned int length)
 {
-  String msg;
-  for (int i = 0; i < length; i++)
-    msg += (char)message[i];
-  msg.trim();
+  String payload;
+  for (unsigned int i = 0; i < length; i++)
+    payload += static_cast<char>(message[i]);
 
-  Serial.print("Received command: ");
-  Serial.println(msg);
+  Serial.print("Received message on ");
+  Serial.print(topic);
+  Serial.print(": ");
+  Serial.println(payload);
 
-  if (msg.equalsIgnoreCase("ON"))
-  {
-    digitalWrite(LED_PIN, HIGH);
-    currentCommand = "ON";
-  }
-  else if (msg.equalsIgnoreCase("OFF"))
-  {
-    digitalWrite(LED_PIN, LOW);
-    currentCommand = "OFF";
-  }
-
-  // Update the LCD immediately when a command arrives
-  lcd.setCursor(0, 1);
-  lcd.print("CMD:");
-  lcd.print(currentCommand);
-  lcd.print("   "); // clear any leftover characters
+  applyControlPayload(payload);
 }
 
 void reconnect()
@@ -97,18 +149,83 @@ void setup()
   dht.begin();
 
   setup_wifi();
-  client.setServer(mqtt_server, mqtt_port);
-  client.setCallback(callback);
+
+  if (!USE_HTTP_TRANSPORT)
+  {
+    client.setServer(mqtt_server, mqtt_port);
+    client.setCallback(callback);
+  }
 }
 
 unsigned long lastMsg = 0;
 const long interval = 3000; // update every 3 seconds
 
+size_t buildTelemetryPayload(char *buffer, size_t bufferSize, float temperature, float humidity)
+{
+  StaticJsonDocument<512> doc;
+  doc["device_id"] = DEVICE_ID;
+  doc["timestamp"] = millis();
+  doc["temperature"] = temperature;
+  doc["humidity"] = humidity;
+
+  JsonArray features = doc.createNestedArray("features");
+  for (int i = 0; i < N_FEATURES; i++)
+  {
+    features.add(X[i]);
+  }
+
+  return serializeJson(doc, buffer, bufferSize);
+}
+
+void publishTelemetryMqtt(const char *buffer, size_t length)
+{
+  client.publish("esp32/data", reinterpret_cast<const uint8_t *>(buffer), length);
+}
+
+void publishTelemetryHttp(const char *buffer, size_t length)
+{
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    Serial.println("[WARN] WiFi disconnected, attempting reconnect before HTTP POST");
+    setup_wifi();
+    if (WiFi.status() != WL_CONNECTED)
+    {
+      Serial.println("[ERROR] Unable to reconnect to WiFi for HTTP transport");
+      return;
+    }
+  }
+
+  HTTPClient http;
+  http.begin(http_endpoint);
+  http.addHeader("Content-Type", "application/json");
+
+  int httpResponseCode = http.POST(reinterpret_cast<const uint8_t *>(buffer), length);
+  if (httpResponseCode > 0)
+  {
+    Serial.print("HTTP response code: ");
+    Serial.println(httpResponseCode);
+    String responsePayload = http.getString();
+    Serial.print("HTTP response payload: ");
+    Serial.println(responsePayload);
+    applyControlPayload(responsePayload);
+  }
+  else
+  {
+    Serial.print("[ERROR] HTTP POST failed: ");
+    Serial.println(httpResponseCode);
+  }
+
+  http.end();
+}
+
 void loop()
 {
-  if (!client.connected())
-    reconnect();
-  client.loop();
+  if (!USE_HTTP_TRANSPORT)
+  {
+    if (!client.connected())
+      reconnect();
+    client.loop();
+  }
 
   unsigned long now = millis();
   if (now - lastMsg > interval)
@@ -139,8 +256,18 @@ void loop()
     lcd.print(currentCommand);
     lcd.print("   ");
 
-    // TODO: Publish all features to MQTT
-    String payload = "{\"temperature\": " + String(t) + ", \"humidity\": " + String(h) + "}";
-    client.publish("esp32/data", payload.c_str());
+    char buffer[512];
+    size_t n = buildTelemetryPayload(buffer, sizeof(buffer), t, h);
+    if (n > 0)
+    {
+      if (USE_HTTP_TRANSPORT)
+      {
+        publishTelemetryHttp(buffer, n);
+      }
+      else
+      {
+        publishTelemetryMqtt(buffer, n);
+      }
+    }
   }
 }

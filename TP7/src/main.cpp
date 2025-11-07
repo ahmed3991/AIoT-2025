@@ -1,11 +1,27 @@
 #include <Arduino.h>
 #include <MicroTFLite.h>
-#include "model_data.h"
-#include "input_image_int8.h" // the test image
+#include "image_list.h" // the test images
+#include "label_data.h" // label names
+#include "model_data.h" // TODO: implemet your model file
+#include <vector>
+#include <random>
+
+// Define camera_fb_t structure for mocking camera input
+typedef struct
+{
+    uint8_t *buf;
+    size_t height;
+    size_t width;
+    size_t len;
+} camera_fb_t;
 
 // Define memory for tensors
 #define TENSOR_ARENA_SIZE 93 * 1024
 uint8_t tensor_arena[TENSOR_ARENA_SIZE];
+
+const int MODEL_INPUT_WIDTH = 28;
+const int MODEL_INPUT_HEIGHT = 28;
+const int MODEL_INPUT_SIZE = MODEL_INPUT_WIDTH * MODEL_INPUT_HEIGHT;
 
 const char *class_names[] = {
     "T-shirt/top",
@@ -25,6 +41,32 @@ tflite::MicroInterpreter *interpreter;
 tflite::AllOpsResolver resolver;
 TfLiteTensor *input;
 TfLiteTensor *output;
+
+// Function to convert camera_fb_t to model input size (28x28 int8_t)
+// In a real scenario, this would involve resizing and color conversion.
+// For this mock, we assume the input_images are already 28x28 int8_t.
+int8_t *convert_camera_frame_to_model_input(const camera_fb_t *fb)
+{
+
+    int8_t *model_input_buffer = (int8_t *)malloc(MODEL_INPUT_SIZE * sizeof(int8_t));
+    if (!model_input_buffer)
+    {
+        Serial.println("Failed to allocate memory for model input buffer!");
+        return nullptr;
+    }
+
+    // In a real application, you would implement image resizing and conversion here
+    // to transform the camera_fb_t (which might be a different resolution or color format)
+    // into the MODEL_INPUT_WIDTH x MODEL_INPUT_HEIGHT (28x28) int8_t format required by the model.
+    // For this example, we are assuming `fb->buf` already contains the correctly formatted data
+    // due to the mock setup in `setup()`.
+
+    // Assuming fb->buf already contains 28x28 int8_t data for the mock
+    // In a real camera scenario, you would implement resizing and type conversion here.
+    memcpy(model_input_buffer, fb->buf, MODEL_INPUT_SIZE * sizeof(int8_t));
+
+    return model_input_buffer;
+}
 
 void setup()
 {
@@ -79,8 +121,37 @@ void setup()
     Serial.print("Input size: ");
     Serial.println(input->bytes);
 
-    // Copy your int8 image into input tensor
-    memcpy(input->data.int8, input_image, 28 * 28 * sizeof(int8_t));
+    // Mock camera input - select a random image
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> distrib(1, NUM_IMAGES);
+    int image_index = distrib(gen);
+    Serial.print("Selected random image: ");
+    Serial.println(image_index);
+
+    // Get the selected image from the array of images
+    const int8_t *selected_image_data = image_list[image_index - 1];
+
+    camera_fb_t fake_fb;
+    fake_fb.buf = (uint8_t *)selected_image_data; // Cast to uint8_t*
+    fake_fb.height = 28;
+    fake_fb.width = 28;
+    fake_fb.len = 28 * 28 * sizeof(int8_t);
+
+    // Convert the fake_fb to model input format
+    int8_t *model_input_data = convert_camera_frame_to_model_input(&fake_fb);
+    if (!model_input_data)
+    {
+        Serial.println("Failed to convert image for model input!");
+        while (1)
+            ;
+    }
+
+    // Copy the converted image into input tensor
+    memcpy(input->data.int8, model_input_data, MODEL_INPUT_SIZE);
+
+    // Free the dynamically allocated memory
+    free(model_input_data);
 
     // Run inference
     if (interpreter->Invoke() != kTfLiteOk)
@@ -118,6 +189,11 @@ void setup()
     Serial.println(max_idx);
     Serial.print("Predicted class name: ");
     Serial.println(class_names[max_idx]);
+
+    Serial.print("True class index: ");
+    Serial.println(label_list[image_index - 1]);
+    Serial.print("True class name: ");
+    Serial.println(class_names[label_list[image_index - 1]]);
 }
 
 void loop()

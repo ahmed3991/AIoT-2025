@@ -1,0 +1,18 @@
+{
+    "version": 1,
+    "author": "AIoT2025-TP3",
+    "editor": "wokwi",
+    "parts": [
+        {
+            "type": "board-xiao-esp32-s3",
+            "id": "esp",
+            "top": 0,
+            "left": 0,
+            "attrs": {
+                "label": "XIAO ESP32S3 (Simulated)",
+                "chip": "esp32s3"
+            }
+        }
+    ],
+    "dependencies": {}
+}

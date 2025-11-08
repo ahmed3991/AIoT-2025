@@ -16,8 +16,7 @@ typedef struct
 } camera_fb_t;
 
 // Define memory for tensors
-#define TENSOR_ARENA_SIZE 93 * 1024
-uint8_t tensor_arena[TENSOR_ARENA_SIZE];
+// TODO: Define the TENSOR_ARENA_SIZE and declare the tensor_arena array.
 
 const int MODEL_INPUT_WIDTH = 28;
 const int MODEL_INPUT_HEIGHT = 28;
@@ -99,7 +98,8 @@ void setup()
     }
 
     // Create interpreter
-    interpreter = new tflite::MicroInterpreter(model, resolver, tensor_arena, TENSOR_ARENA_SIZE);
+    // TODO: Initialize the TFLite MicroInterpreter.
+
     TfLiteStatus allocate_status = interpreter->AllocateTensors();
     if (allocate_status != kTfLiteOk)
     {
@@ -148,18 +148,13 @@ void setup()
     }
 
     // Copy the converted image into input tensor
-    memcpy(input->data.int8, model_input_data, MODEL_INPUT_SIZE);
+    // TODO: Copy the converted image data into the input tensor.
 
     // Free the dynamically allocated memory
     free(model_input_data);
 
     // Run inference
-    if (interpreter->Invoke() != kTfLiteOk)
-    {
-        Serial.println("❌ Inference failed!");
-        while (1)
-            ;
-    }
+    // TODO: Invoke the interpreter to run inference.
 
     Serial.printf("Free heap after inference: %d bytes\n", ESP.getFreeHeap());
     Serial.printf("Free PSRAM after inference: %d bytes\n", ESP.getFreePsram());
@@ -185,15 +180,7 @@ void setup()
         }
     }
 
-    Serial.print("Predicted class index: ");
-    Serial.println(max_idx);
-    Serial.print("Predicted class name: ");
-    Serial.println(class_names[max_idx]);
-
-    Serial.print("True class index: ");
-    Serial.println(label_list[image_index - 1]);
-    Serial.print("True class name: ");
-    Serial.println(class_names[label_list[image_index - 1]]);
+    // TODO: Print the predicted class index and name, and compare with the true class.
 }
 
 void loop()

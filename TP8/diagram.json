@@ -4,14 +4,11 @@
     "editor": "wokwi",
     "parts": [
         {
-            "type": "board-xiao-esp32-s3",
+            "type": "wokwi-esp32-devkit-v1",
             "id": "esp",
             "top": 0,
             "left": 0,
-            "attrs": {
-                "label": "XIAO ESP32S3 (Simulated)",
-                "chip": "esp32s3"
-            }
+            "attrs": {}
         },
         {
             "type": "wokwi-lcd1602",
@@ -25,7 +22,7 @@
         {
             "type": "wokwi-pushbutton",
             "id": "btn1",
-            "top": 61,
+            "top": 131,
             "left": 201.6,
             "attrs": {
                 "color": "green"
@@ -34,7 +31,7 @@
         {
             "type": "wokwi-resistor",
             "id": "r1",
-            "top": 0.95,
+            "top": 147.95,
             "left": 124.8,
             "attrs": {
                 "value": "1000"
@@ -64,7 +61,7 @@
         ],
         [
             "lcd1:GND",
-            "esp:GND",
+            "esp:GND.2",
             "black",
             [
                 "v0"
@@ -72,7 +69,7 @@
         ],
         [
             "lcd1:SDA",
-            "esp:D4",
+            "esp:D21",
             "green",
             [
                 "v0"
@@ -80,7 +77,7 @@
         ],
         [
             "lcd1:SCL",
-            "esp:D5",
+            "esp:D22",
             "blue",
             [
                 "v0"
@@ -96,7 +93,7 @@
             ]
         ],
         [
-            "esp:GND",
+            "esp:GND.1",
             "r1:1",
             "black",
             [
@@ -105,7 +102,7 @@
             ]
         ],
         [
-            "esp:D3",
+            "esp:D4",
             "r1:2",
             "green",
             [

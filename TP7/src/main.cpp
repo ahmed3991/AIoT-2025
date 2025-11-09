@@ -1,10 +1,16 @@
 #include <Arduino.h>
 #include <MicroTFLite.h>
+#include <LiquidCrystal_I2C.h>
 #include "image_list.h" // the test images
 #include "label_data.h" // label names
 #include "model_data.h" // TODO: implemet your model file
 #include <vector>
 #include <random>
+
+#define BUTTONPIN 4
+
+LiquidCrystal_I2C lcd(0x27, 16, 2); // LCD address 0x27 or 0x3F
+String currentCommand = "---";      // default command
 
 // Define camera_fb_t structure for mocking camera input
 typedef struct
@@ -14,6 +20,16 @@ typedef struct
     size_t width;
     size_t len;
 } camera_fb_t;
+
+// Mock camera input - select a random image
+std::random_device rd;
+std::mt19937 gen(rd());
+std::uniform_int_distribution<> distrib(1, NUM_IMAGES);
+
+// variable for storing the pushbutton status
+int buttonState = 0;
+
+bool takeNewPicture = false;
 
 // Define memory for tensors
 // TODO: Define the TENSOR_ARENA_SIZE and declare the tensor_arena array.
@@ -70,6 +86,13 @@ int8_t *convert_camera_frame_to_model_input(const camera_fb_t *fb)
 void setup()
 {
     Serial.begin(115200);
+    // Wire.begin(SDA_PIN, SCL_PIN); // define I2C pins
+    pinMode(BUTTONPIN, INPUT);
+    lcd.init();
+    lcd.backlight();
+    lcd.clear();
+    lcd.print("Starting...");
+
     while (!Serial)
         ;
 
@@ -121,69 +144,91 @@ void setup()
     Serial.print("Input size: ");
     Serial.println(input->bytes);
 
-    // Mock camera input - select a random image
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> distrib(1, NUM_IMAGES);
-    int image_index = distrib(gen);
-    Serial.print("Selected random image: ");
-    Serial.println(image_index);
-
-    // Get the selected image from the array of images
-    const int8_t *selected_image_data = image_list[image_index - 1];
-
-    camera_fb_t fake_fb;
-    fake_fb.buf = (uint8_t *)selected_image_data; // Cast to uint8_t*
-    fake_fb.height = 28;
-    fake_fb.width = 28;
-    fake_fb.len = 28 * 28 * sizeof(int8_t);
-
-    // Convert the fake_fb to model input format
-    int8_t *model_input_data = convert_camera_frame_to_model_input(&fake_fb);
-    if (!model_input_data)
-    {
-        Serial.println("Failed to convert image for model input!");
-        while (1)
-            ;
-    }
-
-    // Copy the converted image into input tensor
-    // TODO: Copy the converted image data into the input tensor.
-
-    // Free the dynamically allocated memory
-    free(model_input_data);
-
-    // Run inference
-    // TODO: Invoke the interpreter to run inference.
-
-    Serial.printf("Free heap after inference: %d bytes\n", ESP.getFreeHeap());
-    Serial.printf("Free PSRAM after inference: %d bytes\n", ESP.getFreePsram());
-
-    // Print output values
-    Serial.println("✅ Inference successful! Output values:");
-    for (int i = 0; i < output->bytes; i++)
-    {
-        Serial.print(output->data.int8[i]);
-        Serial.print(" ");
-    }
-    Serial.println();
-
-    // Find the predicted class
-    int max_idx = 0;
-    int8_t max_val = output->data.int8[0];
-    for (int i = 1; i < output->bytes; i++)
-    {
-        if (output->data.int8[i] > max_val)
-        {
-            max_val = output->data.int8[i];
-            max_idx = i;
-        }
-    }
-
-    // TODO: Print the predicted class index and name, and compare with the true class.
+    takeNewPicture = true;
 }
 
 void loop()
 {
-    delay(3000);
+    buttonState = digitalRead(BUTTONPIN);
+
+    // Serial.println(buttonState);
+    //  check if the pushbutton is pressed.
+    //  if it is, the buttonState is HIGH
+    if (buttonState == HIGH && takeNewPicture)
+    {
+        takeNewPicture = false;
+
+        // send the image only once per button press
+        // Mock camera input - select a random image
+        int image_index = distrib(gen);
+        Serial.print("Selected random image: ");
+        Serial.println(image_index);
+
+        lcd.setCursor(0, 0);
+        lcd.print("Predicting img" + String(image_index) + "...");
+
+        // Get the selected image from the array of images
+        const int8_t *selected_image_data = image_list[image_index - 1];
+
+        camera_fb_t fake_fb;
+        fake_fb.buf = (uint8_t *)selected_image_data; // Cast to uint8_t*
+        fake_fb.height = 28;
+        fake_fb.width = 28;
+        fake_fb.len = 28 * 28 * sizeof(int8_t);
+
+        // Convert the fake_fb to model input format
+        int8_t *model_input_data = convert_camera_frame_to_model_input(&fake_fb);
+        if (!model_input_data)
+        {
+            lcd.setCursor(0, 1);
+            lcd.print("Failed Input");
+            lcd.print("            "); // clear any leftover characters
+            takeNewPicture = true;
+            Serial.println("Failed to convert image for model input!");
+            while (1)
+                ;
+        }
+
+        // Copy the converted image into input tensor
+        // TODO: Copy the converted image data into the input tensor.
+
+        // Free the dynamically allocated memory
+        free(model_input_data);
+
+        // Run inference
+        // TODO: Invoke the interpreter to run inference.
+
+        Serial.printf("Free heap after inference: %d bytes\n", ESP.getFreeHeap());
+        Serial.printf("Free PSRAM after inference: %d bytes\n", ESP.getFreePsram());
+
+        // Print output values
+        Serial.println("✅ Inference successful! Output values:");
+        for (int i = 0; i < output->bytes; i++)
+        {
+            Serial.print(output->data.int8[i]);
+            Serial.print(" ");
+        }
+        Serial.println();
+
+        // Find the predicted class
+        int max_idx = 0;
+        int8_t max_val = output->data.int8[0];
+        for (int i = 1; i < output->bytes; i++)
+        {
+            if (output->data.int8[i] > max_val)
+            {
+                max_val = output->data.int8[i];
+                max_idx = i;
+            }
+        }
+
+        // TODO: Print the predicted class index and name, and compare with the true class.
+
+        takeNewPicture = true;
+    }
+    else
+    {
+        lcd.setCursor(0, 0);
+        lcd.print("Press BTN ");
+    }
 }

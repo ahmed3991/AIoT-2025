@@ -131,11 +131,15 @@ After providing the input, you invoke the interpreter to run the inference.
 
 ```cpp
     if (interpreter->Invoke() != kTfLiteOk)
-    {
-        Serial.println("❌ Inference failed!");
-        while (1)
-            ;
-    }
+        {
+            takeNewPicture = true;
+            lcd.setCursor(0, 1);
+            lcd.print("Failed Inferece");
+            lcd.print("    "); // clear any leftover characters
+            Serial.println("❌ Inference failed!");
+            while (1)
+                ;
+        }
 ```
 
 **Explanation:**
@@ -151,14 +155,19 @@ Finally, you retrieve the output from the model's output tensor, find the class 
 
 ```cpp
     Serial.print("Predicted class index: ");
-    Serial.println(max_idx);
-    Serial.print("Predicted class name: ");
-    Serial.println(class_names[max_idx]);
+        Serial.println(max_idx);
+        Serial.print("Predicted class name: ");
+        Serial.println(class_names[max_idx]);
 
-    Serial.print("True class index: ");
-    Serial.println(label_list[image_index - 1]);
-    Serial.print("True class name: ");
-    Serial.println(class_names[label_list[image_index - 1]]);
+        Serial.print("True class index: ");
+        Serial.println(label_list[image_index - 1]);
+        Serial.print("True class name: ");
+        Serial.println(class_names[label_list[image_index - 1]]);
+        // Update LCD with predicted class
+        lcd.setCursor(0, 1);
+        lcd.print("Class:");
+        lcd.print(class_names[max_idx]);
+        lcd.print("   "); // clear any leftover characters
 ```
 
 **Explanation:**

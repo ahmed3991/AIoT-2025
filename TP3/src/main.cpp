@@ -1,69 +1,55 @@
-
 #include "DHT.h"
-#define DHTPIN 2      // Digital pin connected to the DHT sensor
-#define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
+#include <math.h>
+
+#define DHTPIN 2
+#define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 
-const int N_FEATURES = 12;
-const float MEAN[N_FEATURES] = {/* μ_Temperature, μ_Humidity */};
-const float STD[N_FEATURES] = {/* σ_Temperature, σ_Humidity */};
-const float WEIGHTS[N_FEATURES] = {/* W_Temperature, W_Humidity */};
-const float BIAS = 0; /* b */
+const int N_FEATURES = 2;
+const float MEAN[N_FEATURES] = {25.0, 50.0};
+const float STD[N_FEATURES]  = {5.0, 20.0};
+const float WEIGHTS[N_FEATURES] = {-1.10434114, 1.37397825};
+const float BIAS = -0.3836474233535921;
 
-float X[N_FEATURES] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0}; // Input features
+float sigmoid(float x) {
+  return 1.0 / (1.0 + exp(-x));
+}
 
-void setup()
-{
+void setup() {
   Serial.begin(9600);
-  Serial.println(F("DHTxx test!"));
+  Serial.println(F("DHT22 AI Comfort Model (Temperature & Humidity)"));
   dht.begin();
 }
 
-void loop()
-{
+void loop() {
   delay(2000);
 
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
   float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  float f = dht.readTemperature(true);
 
-  // add data to input array
-  X[0] = t;
-  X[1] = h;
-
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t) || isnan(f))
-  {
+  if (isnan(h) || isnan(t)) {
     Serial.println(F("Failed to read from DHT sensor!"));
     return;
   }
 
-  // TODO: Add code to standardize the inputs
+  float t_scaled = (t - MEAN[0]) / STD[0];
+  float h_scaled = (h - MEAN[1]) / STD[1];
+  float z = WEIGHTS[0] * t_scaled + WEIGHTS[1] * h_scaled + BIAS;
+  float y = sigmoid(z);
 
-  // TODO: Add code to compute the output of wx + b
+  Serial.print("Temperature: ");
+  Serial.print(t, 2);
+  Serial.print(" °C, Humidity: ");
+  Serial.print(h, 2);
+  Serial.print("% => Model Output: ");
+  Serial.println(y, 6);
 
-  // TODO: Add code to apply the sigmoid function
+  if (y > 0.7)
+    Serial.println("Comfortable environment");
+  else if (y > 0.4)
+    Serial.println("Slightly uncomfortable");
+  else
+    Serial.println("Uncomfortable environment");
 
-  // TODO: Add code to print the result to the serial monitor
-
-  // Compute heat index in Fahrenheit (the default)
-  // float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
-  // float hic = dht.computeHeatIndex(t, h, false);
-
-  Serial.print("Humidity: ");
-  Serial.print(h);
-  Serial.print("%  Tempeature: ");
-  Serial.print(t);
-  Serial.print("°C ");
-  Serial.println(f);
-  // Serial.print(F("°F  Heat index: "));
-  // Serial.print(hic);
-  // Serial.print(F("°C "));
-  // Serial.print(hif);
-  // Serial.println(F("°F"));
+  Serial.println("-----------------------------");
 }

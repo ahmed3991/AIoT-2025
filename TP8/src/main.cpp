@@ -182,6 +182,8 @@ void loop()
         ;
     }
 
+
+    
 Serial.print("sending image data to MQTT... ");
 
 // 1️⃣ Build comma-separated list of int8 values

@@ -2,4 +2,4 @@ paho-mqtt
 scikit-learn
 numpy
 xgboost
-tensorflow
+tensorflow 

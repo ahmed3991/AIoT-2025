@@ -1,0 +1,8 @@
+models:
+  - name: final_transaction_usd
+    tests:
+      - not_null:
+          column_name: transaction_id
+      - relationships:
+          to: source('example','daily_transactions')
+          field: transaction_id

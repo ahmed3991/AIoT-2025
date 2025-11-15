@@ -1,50 +1,23 @@
 {
-    "version": 1,
-    "author": "AIoT2025-TP3",
-    "editor": "wokwi",
-    "parts": [
-        {
-            "type": "wokwi-arduino-uno",
-            "id": "uno",
-            "top": 0,
-            "left": 0,
-            "attrs": {}
-        },
-        {
-            "type": "wokwi-dht22",
-            "id": "dht1",
-            "top": -201.3,
-            "left": 23.4,
-            "attrs": {}
-        }
-    ],
-    "connections": [
-        [
-            "dht1:VCC",
-            "uno:5V",
-            "red",
-            [
-                "v316.8",
-                "h124.8"
-            ]
-        ],
-        [
-            "dht1:SDA",
-            "uno:2",
-            "green",
-            [
-                "v57.6",
-                "h192.1"
-            ]
-        ],
-        [
-            "dht1:GND",
-            "uno:GND.1",
-            "black",
-            [
-                "v0"
-            ]
-        ]
-    ],
-    "dependencies": {}
+  "version": 1,
+  "author": "AIoT2025-TP3",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "wokwi-arduino-uno", "id": "uno", "top": 0.6, "left": -0.6, "attrs": {} },
+    { "type": "wokwi-dht22", "id": "dht1", "top": -162.9, "left": -82.2, "attrs": {} },
+    { "type": "wokwi-gas-sensor", "id": "mq2", "top": -150.9, "left": 83.8, "attrs": {} },
+    { "type": "wokwi-flame-sensor", "id": "flame1", "top": -149, "left": 405.8, "attrs": {} }
+  ],
+  "connections": [
+    [ "dht1:VCC", "uno:5V", "red", [ "v316.8", "h220.8", "v-76.7" ] ],
+    [ "dht1:SDA", "uno:2", "green", [ "v38.4", "h294.2" ] ],
+    [ "dht1:GND", "uno:GND.1", "black", [ "v19.2", "h153.9" ] ],
+    [ "mq2:VCC", "uno:5V", "red", [ "h96", "v315.9", "h-157.4" ] ],
+    [ "mq2:AOUT", "uno:A0", "blue", [ "h115.2", "v383.5" ] ],
+    [ "flame1:VCC", "uno:5V", "red", [ "h9.6", "v403.2", "h-455" ] ],
+    [ "flame1:GND", "uno:GND.3", "black", [ "h38.4", "v355.1", "h-349" ] ],
+    [ "flame1:DOUT", "uno:3", "orange", [ "v86.2", "h-377.8" ] ],
+    [ "mq2:GND", "uno:GND.1", "black", [ "h28.8", "v47.2", "h-134.4", "v9.6" ] ]
+  ],
+  "dependencies": {}
 }

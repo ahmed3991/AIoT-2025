@@ -1,69 +1,104 @@
-
 #include "DHT.h"
-#define DHTPIN 2      // Digital pin connected to the DHT sensor
-#define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
-DHT dht(DHTPIN, DHTTYPE);
+#include <math.h>
 
-const int N_FEATURES = 12;
-const float MEAN[N_FEATURES] = {/* μ_Temperature, μ_Humidity */};
-const float STD[N_FEATURES] = {/* σ_Temperature, σ_Humidity */};
-const float WEIGHTS[N_FEATURES] = {/* W_Temperature, W_Humidity */};
-const float BIAS = 0; /* b */
+#define SENSOR_PIN 2
+#define SENSOR_TYPE DHT22
 
-float X[N_FEATURES] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0}; // Input features
+DHT climate(SENSOR_PIN, SENSOR_TYPE);
 
-void setup()
-{
-  Serial.begin(9600);
-  Serial.println(F("DHTxx test!"));
-  dht.begin();
+const int FIRE_LED = 13;
+const int FEATURE_COUNT = 12;
+
+const float AVG[FEATURE_COUNT]    = {-0.3464, -0.2900, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+const float SCALE[FEATURE_COUNT]  = {18079.723677, 110001.609881, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+const float COEFFS[FEATURE_COUNT] = {1.900675, -1.407203, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+const float OFFSET = 0;
+
+float inputVec[FEATURE_COUNT] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0};
+
+void normalizeData(float data[], int n) {
+  for (int i = 0; i < n; i++) {
+    if (SCALE[i] != 0) data[i] = (data[i] - AVG[i]) / SCALE[i];
+  }
 }
 
-void loop()
-{
+float weightedSum(float data[], float weights[], int n, float bias) {
+  float sum = bias;
+  for (int i = 0; i < n; i++) sum += weights[i] * data[i];
+  return sum;
+}
+
+float sigmoidFunc(float x) {
+  if (x < -20.0) return 0.0;
+  if (x > 20.0) return 1.0;
+  return 1.0 / (1.0 + exp(-x));
+}
+
+float infer(float data[], int n) {
+  float z = weightedSum(data, COEFFS, n, OFFSET);
+  return sigmoidFunc(z);
+}
+
+void ledControl(float prob) {
+  digitalWrite(FIRE_LED, (prob >= 0.5) ? HIGH : LOW);
+}
+
+void setup() {
+  Serial.begin(9600);
+  climate.begin();
+  pinMode(FIRE_LED, OUTPUT);
+  digitalWrite(FIRE_LED, LOW);
+  delay(1000);
+}
+
+void loop() {
   delay(2000);
 
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  float f = dht.readTemperature(true);
+  float humidity = climate.readHumidity();
+  float tempC = climate.readTemperature();
+  float tempF = climate.readTemperature(true);
 
-  // add data to input array
-  X[0] = t;
-  X[1] = h;
+  inputVec[0] = tempC;
+  inputVec[1] = humidity;
 
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t) || isnan(f))
-  {
-    Serial.println(F("Failed to read from DHT sensor!"));
+  if (isnan(humidity) || isnan(tempC) || isnan(tempF)) {
+    Serial.println("Sensor error!");
+    for (int i = 0; i < 2; i++) {
+      digitalWrite(FIRE_LED, HIGH); delay(200);
+      digitalWrite(FIRE_LED, LOW);  delay(200);
+    }
     return;
   }
 
-  // TODO: Add code to standardize the inputs
+  float standardized[FEATURE_COUNT];
+  for (int i = 0; i < FEATURE_COUNT; i++) standardized[i] = inputVec[i];
+  normalizeData(standardized, FEATURE_COUNT);
 
-  // TODO: Add code to compute the output of wx + b
+  float zVal = weightedSum(standardized, COEFFS, FEATURE_COUNT, OFFSET);
+  float prediction = infer(standardized, FEATURE_COUNT);
+  ledControl(prediction);
 
-  // TODO: Add code to apply the sigmoid function
+  Serial.println("\nFire Detection Model Output");
+  Serial.print("Temp: "); Serial.print(tempC);
+  Serial.print("°C, Humidity: "); Serial.print(humidity); Serial.println("%");
+  Serial.print("Z-value: "); Serial.println(zVal, 4);
+  Serial.print("Probability: "); Serial.println(prediction, 4);
 
-  // TODO: Add code to print the result to the serial monitor
+  if (prediction >= 0.5) {
+    Serial.println("Alert: FIRE DETECTED!");
+    Serial.println("LED: ON");
+  } else {
+    Serial.println("Status: SAFE");
+    Serial.println("LED: OFF");
+  }
 
-  // Compute heat index in Fahrenheit (the default)
-  // float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
-  // float hic = dht.computeHeatIndex(t, h, false);
+  Serial.print("Sensor Values -> ");
+  Serial.print(tempC); Serial.print("°C (");
+  Serial.print(tempF); Serial.print("°F), ");
+  Serial.print(humidity); Serial.println("%");
 
-  Serial.print("Humidity: ");
-  Serial.print(h);
-  Serial.print("%  Tempeature: ");
-  Serial.print(t);
-  Serial.print("°C ");
-  Serial.println(f);
-  // Serial.print(F("°F  Heat index: "));
-  // Serial.print(hic);
-  // Serial.print(F("°C "));
-  // Serial.print(hif);
-  // Serial.println(F("°F"));
+  Serial.print("Standardized -> T: ");
+  Serial.print(standardized[0], 6);
+  Serial.print(", H: ");
+  Serial.println(standardized[1], 6);
 }

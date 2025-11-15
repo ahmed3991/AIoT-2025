@@ -33,6 +33,8 @@ bool takeNewPicture = false;
 
 // Define memory for tensors
 // TODO: Define the TENSOR_ARENA_SIZE and declare the tensor_arena array.
+#define TENSOR_ARENA_SIZE (50 * 1024)
+uint8_t tensor_arena[TENSOR_ARENA_SIZE];
 
 const int MODEL_INPUT_WIDTH = 28;
 const int MODEL_INPUT_HEIGHT = 28;
@@ -48,7 +50,8 @@ const char *class_names[] = {
     "Shirt",
     "Sneaker",
     "Bag",
-    "Ankle boot"};
+    "Ankle boot"
+};
 
 // Define interpreter, model, etc.
 const tflite::Model *model;
@@ -62,7 +65,6 @@ TfLiteTensor *output;
 // For this mock, we assume the input_images are already 28x28 int8_t.
 int8_t *convert_camera_frame_to_model_input(const camera_fb_t *fb)
 {
-
     int8_t *model_input_buffer = (int8_t *)malloc(MODEL_INPUT_SIZE * sizeof(int8_t));
     if (!model_input_buffer)
     {
@@ -112,7 +114,7 @@ void setup()
     Serial.printf("Free PSRAM before: %d bytes\n", ESP.getFreePsram());
 
     // Load model
-    model = tflite::GetModel(fashion_mnist_cnn_int8_tflite);
+    model = tflite::GetModel(cnn_model_quantized_tflite);
     if (model->version() != TFLITE_SCHEMA_VERSION)
     {
         Serial.println("Model schema version mismatch!");
@@ -122,6 +124,12 @@ void setup()
 
     // Create interpreter
     // TODO: Initialize the TFLite MicroInterpreter.
+    interpreter = new tflite::MicroInterpreter(
+        model,
+        resolver,
+        tensor_arena,
+        TENSOR_ARENA_SIZE
+    );
 
     TfLiteStatus allocate_status = interpreter->AllocateTensors();
     if (allocate_status != kTfLiteOk)
@@ -191,12 +199,21 @@ void loop()
 
         // Copy the converted image into input tensor
         // TODO: Copy the converted image data into the input tensor.
+        memcpy(input->data.int8, model_input_data, MODEL_INPUT_SIZE);
 
         // Free the dynamically allocated memory
         free(model_input_data);
 
         // Run inference
         // TODO: Invoke the interpreter to run inference.
+        if (interpreter->Invoke() != kTfLiteOk)
+        {
+            takeNewPicture = true;
+            lcd.setCursor(0, 1);
+            lcd.print("Failed Inference");
+            Serial.println("Inference failed!");
+            while (1);
+        }
 
         Serial.printf("Free heap after inference: %d bytes\n", ESP.getFreeHeap());
         Serial.printf("Free PSRAM after inference: %d bytes\n", ESP.getFreePsram());
@@ -223,6 +240,23 @@ void loop()
         }
 
         // TODO: Print the predicted class index and name, and compare with the true class.
+        Serial.print("Predicted class index: ");
+        Serial.println(max_idx);
+
+        Serial.print("Predicted class name: ");
+        Serial.println(class_names[max_idx]);
+
+        Serial.print("True class index: ");
+        Serial.println(label_list[image_index - 1]);
+
+        Serial.print("True class name: ");
+        Serial.println(class_names[label_list[image_index - 1]]);
+
+        // LCD update
+        lcd.setCursor(0, 1);
+        lcd.print("Class:");
+        lcd.print(class_names[max_idx]);
+        lcd.print("   "); // clear extra chars
 
         takeNewPicture = true;
     }

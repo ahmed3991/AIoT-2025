@@ -1,0 +1,1 @@
+{"_invocation_id": "49418073-8b1c-4144-a020-50b72918f2b1", "linked": {"0": {"name": "source.currency_conversion.example.daily_transactions", "type": "source", "succ": [2]}, "1": {"name": "source.currency_conversion.example.currency_rates", "type": "source", "succ": [2]}, "2": {"name": "model.currency_conversion.final_transaction_usd", "type": "model"}}}

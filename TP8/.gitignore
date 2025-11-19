@@ -1,0 +1,10 @@
+.pio
+include
+lib
+test.pio/
+.vscode/
+ai_logic/venv/
+__pycache__/
+.venv/
+mosquitto/
+*.log

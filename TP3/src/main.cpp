@@ -1,69 +1,95 @@
-
 #include "DHT.h"
+#include <math.h>
+
 #define DHTPIN 2      // Digital pin connected to the DHT sensor
-#define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
+#define DHTTYPE DHT22 // DHT 22 (AM2302), AM2321
 DHT dht(DHTPIN, DHTTYPE);
 
-const int N_FEATURES = 12;
-const float MEAN[N_FEATURES] = {/* μ_Temperature, μ_Humidity */};
-const float STD[N_FEATURES] = {/* σ_Temperature, σ_Humidity */};
-const float WEIGHTS[N_FEATURES] = {/* W_Temperature, W_Humidity */};
-const float BIAS = 0; /* b */
+// === MODEL PARAMETERS ===
+const int N_FEATURES = 2;
+const float MEAN[N_FEATURES] = {15.92865516, 48.56115819};
+const float STD[N_FEATURES] = {14.36205192, 8.84192962};
+const float WEIGHTS[N_FEATURES] = {-0.20914643, 0.97220885};
+const float BIAS = 0.9716077270501117;
 
-float X[N_FEATURES] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0}; // Input features
+// === FUNCTIONS ===
+float standardize(float x_raw, int idx)
+{
+  return (x_raw - MEAN[idx]) / STD[idx];
+}
 
+float sigmoid(float z)
+{
+  return 1.0 / (1.0 + exp(-z));
+}
+
+float predict(float features[])
+{
+  float z = 0.0;
+  for (int i = 0; i < N_FEATURES; i++)
+  {
+    z += WEIGHTS[i] * features[i];
+  }
+  z += BIAS;
+  return sigmoid(z);
+}
+
+// === MAIN PROGRAM ===
 void setup()
 {
   Serial.begin(9600);
-  Serial.println(F("DHTxx test!"));
+  Serial.println(F("=== DHTxx Logistic Regression Debug Test ==="));
   dht.begin();
+  randomSeed(analogRead(0)); // for simulated variation if needed
 }
 
 void loop()
 {
   delay(2000);
 
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  float f = dht.readTemperature(true);
+  float humidity = dht.readHumidity();
+  float temperature = dht.readTemperature();
 
-  // add data to input array
-  X[0] = t;
-  X[1] = h;
-
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t) || isnan(f))
+  // In Wokwi, DHT may not give real readings, so simulate small changes if needed
+  if (isnan(humidity) || isnan(temperature) || humidity == 0.0 || temperature == 0.0)
   {
-    Serial.println(F("Failed to read from DHT sensor!"));
-    return;
+    temperature = 20.0 + random(-50, 50) * 0.1; // random 15-25C
+    humidity = 40.0 + random(-100, 100) * 0.1;  // random 30-50%
+    Serial.println(F("[DEBUG] Using simulated values (Wokwi mode)"));
   }
 
-  // TODO: Add code to standardize the inputs
+  // === DEBUG OUTPUT ===
+  Serial.println(F("\n--- SENSOR INPUT ---"));
+  Serial.print("Raw Temperature: ");
+  Serial.println(temperature);
+  Serial.print("Raw Humidity: ");
+  Serial.println(humidity);
 
-  // TODO: Add code to compute the output of wx + b
+  float x_scaled[N_FEATURES];
+  x_scaled[0] = standardize(temperature, 0);
+  x_scaled[1] = standardize(humidity, 1);
 
-  // TODO: Add code to apply the sigmoid function
+  Serial.println(F("--- NORMALIZED FEATURES ---"));
+  Serial.print("Norm Temperature: ");
+  Serial.println(x_scaled[0]);
+  Serial.print("Norm Humidity: ");
+  Serial.println(x_scaled[1]);
 
-  // TODO: Add code to print the result to the serial monitor
+  float z = WEIGHTS[0] * x_scaled[0] + WEIGHTS[1] * x_scaled[1] + BIAS;
+  Serial.print("Linear Combination (z): ");
+  Serial.println(z, 6);
 
-  // Compute heat index in Fahrenheit (the default)
-  // float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
-  // float hic = dht.computeHeatIndex(t, h, false);
+  float y_pred = predict(x_scaled);
 
-  Serial.print("Humidity: ");
-  Serial.print(h);
-  Serial.print("%  Tempeature: ");
-  Serial.print(t);
-  Serial.print("°C ");
-  Serial.println(f);
-  // Serial.print(F("°F  Heat index: "));
-  // Serial.print(hic);
-  // Serial.print(F("°C "));
-  // Serial.print(hif);
-  // Serial.println(F("°F"));
+  Serial.println(F("--- MODEL OUTPUT ---"));
+  Serial.print("Predicted Probability: ");
+  Serial.println(y_pred, 4);
+  Serial.print("Predicted Class: ");
+  Serial.println(y_pred >= 0.5 ? "1" : "0");
+
+  // Warning if probability is always stuck
+ if (fabs(y_pred - 0.02) < 0.001)
+{
+  Serial.println(F("[WARNING] Probability stuck near 0.02 - check input variation."));
+}
 }

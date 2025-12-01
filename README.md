@@ -10,12 +10,13 @@ This repository documents a comprehensive learning journey through **Artificial 
 
 ### 🎯 Learning Path
 
-The course follows a structured progression through three main phases:
+The course follows a structured progression through four main phases:
 
 ```mermaid
 graph LR
     A[Phase 1: ML Fundamentals] --> B[Phase 2: Embedded ML]
-    B --> C[Phase 3: Edge AI Systems]
+    B --> C[Phase 3: Deep Learning]
+    C --> D[Phase 4: MLOps & Production]
     
     A --> A1[Cloud Computing]
     A --> A2[Model Development]
@@ -23,11 +24,15 @@ graph LR
     
     B --> B1[Microcontroller Deployment]
     B --> B2[Communication Protocols]
-    B --> B3[TinyML Framework]
+    B --> B3[Hybrid Architectures]
     
-    C --> C1[MLOps Platforms]
-    C --> C2[Audio Processing]
-    C --> C3[Real-time Inference]
+    C --> C1[CNNs for Images]
+    C --> C2[TensorFlow Lite]
+    C --> C3[Distributed Inference]
+    
+    D --> D1[MLOps Platforms]
+    D --> D2[Audio Processing]
+    D --> D3[Real-time Systems]
 ```
 
 ---

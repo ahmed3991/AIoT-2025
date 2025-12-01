@@ -12,36 +12,12 @@ This repository documents a comprehensive learning journey through **Artificial 
 
 The course follows a structured progression through four main phases:
 
-```mermaid
-graph TB
-    subgraph Phase1["Phase 1: ML Fundamentals (TP1-TP2)"]
-        A1[Cloud Computing]
-        A2[Model Development]
-        A3[Resource Analysis]
-    end
-    
-    subgraph Phase2["Phase 2: Embedded ML (TP3-TP4)"]
-        B1[Microcontroller Deployment]
-        B2[Communication Protocols]
-        B3[Hybrid Architectures]
-    end
-    
-    subgraph Phase3["Phase 3: Deep Learning (TP5-TP8)"]
-        C1[CNNs for Images]
-        C2[TensorFlow Lite]
-        C3[Distributed Inference]
-    end
-    
-    subgraph Phase4["Phase 4: MLOps & Production (TP9-TP10)"]
-        D1[MLOps Platforms]
-        D2[Audio Processing]
-        D3[Real-time Systems]
-    end
-    
-    Phase1 --> Phase2
-    Phase2 --> Phase3
-    Phase3 --> Phase4
-```
+| Phase | TPs | Focus Areas |
+|-------|-----|-------------|
+| **Phase 1: ML Fundamentals** | TP1-TP2 | Cloud Computing • Model Development • Resource Analysis |
+| **Phase 2: Embedded ML** | TP3-TP4 | Microcontroller Deployment • Communication Protocols • Hybrid Architectures |
+| **Phase 3: Deep Learning** | TP5-TP8 | CNNs for Images • TensorFlow Lite • Distributed Inference |
+| **Phase 4: MLOps & Production** | TP9-TP10 | MLOps Platforms • Audio Processing • Real-time Systems |
 
 ---
 

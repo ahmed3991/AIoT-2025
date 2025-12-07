@@ -182,11 +182,25 @@ void loop()
         ;
     }
 
-    // TODO: Publish all features to MQTT
 
-    Serial.print("sending image data to MQTT... ");
+    
+Serial.print("sending image data to MQTT... ");
 
-    // TODO: Publish the image data as a JSON array
+// 1️⃣ Build comma-separated list of int8 values
+String t = "";
+for (int i = 0; i < MODEL_INPUT_SIZE; i++) {
+  t += String(model_input_data[i]);
+  if (i < MODEL_INPUT_SIZE - 1)
+    t += ",";
+}
+
+// 2️⃣ Build JSON payload
+String payload = "{\"encoded_image\": [" + t + "]}";
+
+// 3️⃣ Publish to esp32/data
+client.publish("esp32/data", payload.c_str());
+
+Serial.println("Image data published to MQTT!");
 
     free(model_input_data);
     Serial.println("done");

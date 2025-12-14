@@ -1,0 +1,13 @@
+[wokwi]
+version = 1
+firmware = ".pio/build/esp32dev/firmware.bin"
+elf = ".pio/build/esp32dev/firmware.elf"
+
+[[network]]
+name = "flask_server"
+type = "wifi"
+ssid = "AndroidAP3CD1"
+password = "123456789"
+
+[env]
+server_url = "http://192.168.43.30:5000/infer"

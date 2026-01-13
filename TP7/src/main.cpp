@@ -33,6 +33,9 @@ bool takeNewPicture = false;
 
 // Define memory for tensors
 // TODO: Define the TENSOR_ARENA_SIZE and declare the tensor_arena array.
+#define TENSOR_ARENA_SIZE (93 * 1024)
+uint8_t tensor_arena[TENSOR_ARENA_SIZE];
+
 
 const int MODEL_INPUT_WIDTH = 28;
 const int MODEL_INPUT_HEIGHT = 28;
@@ -112,7 +115,7 @@ void setup()
     Serial.printf("Free PSRAM before: %d bytes\n", ESP.getFreePsram());
 
     // Load model
-    model = tflite::GetModel(fashion_mnist_cnn_int8_tflite);
+    model = tflite::GetModel(model_tflite);
     if (model->version() != TFLITE_SCHEMA_VERSION)
     {
         Serial.println("Model schema version mismatch!");
@@ -122,6 +125,13 @@ void setup()
 
     // Create interpreter
     // TODO: Initialize the TFLite MicroInterpreter.
+    interpreter = new tflite::MicroInterpreter(
+    model,          // the tflite model pointer
+    resolver,       // AllOpsResolver
+    tensor_arena,   // memory buffer
+    TENSOR_ARENA_SIZE
+);
+
 
     TfLiteStatus allocate_status = interpreter->AllocateTensors();
     if (allocate_status != kTfLiteOk)
@@ -191,12 +201,20 @@ void loop()
 
         // Copy the converted image into input tensor
         // TODO: Copy the converted image data into the input tensor.
+        memcpy(input->data.int8, model_input_data, MODEL_INPUT_SIZE * sizeof(int8_t));
 
         // Free the dynamically allocated memory
         free(model_input_data);
 
         // Run inference
         // TODO: Invoke the interpreter to run inference.
+        TfLiteStatus invoke_status = interpreter->Invoke();
+        if (invoke_status != kTfLiteOk) {
+            Serial.println("Error: Inference failed!");
+            lcd.setCursor(0, 1);
+            lcd.print("Infer Failed");
+            while (1);
+        }
 
         Serial.printf("Free heap after inference: %d bytes\n", ESP.getFreeHeap());
         Serial.printf("Free PSRAM after inference: %d bytes\n", ESP.getFreePsram());
@@ -223,6 +241,15 @@ void loop()
         }
 
         // TODO: Print the predicted class index and name, and compare with the true class.
+        Serial.print("Predicted class: ");
+        Serial.print(max_idx);
+        Serial.print(" -> ");
+        Serial.println(class_names[max_idx]);
+
+        lcd.setCursor(0, 1);
+        lcd.print("Pred: ");
+        lcd.print(class_names[max_idx]);
+        lcd.print("      ");  // clear trailing characters
 
         takeNewPicture = true;
     }

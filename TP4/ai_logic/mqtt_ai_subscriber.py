@@ -1,4 +1,5 @@
-import json, paho.mqtt.client as mqtt
+import json
+import paho.mqtt.client as mqtt
 
 def on_message(client, userdata, msg):
     data = json.loads(msg.payload)

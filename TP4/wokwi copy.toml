@@ -1,0 +1,9 @@
+[wokwi]
+version = 1
+firmware = ".pio/build/esp32dev/firmware.bin"
+elf = ".pio/build/esp32dev/firmware.elf"
+
+[connections.phantomio]
+# Enable PhantomIO for serial and telemetry
+enabled = true
+port = "serial"

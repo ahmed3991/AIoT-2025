@@ -1,21 +1,25 @@
-
 #include "DHT.h"
+
 #define DHTPIN 2      // Digital pin connected to the DHT sensor
-#define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
+#define DHTTYPE DHT22 // DHT 22 (AM2302), AM2321
 DHT dht(DHTPIN, DHTTYPE);
 
-const int N_FEATURES = 12;
-const float MEAN[N_FEATURES] = {/* μ_Temperature, μ_Humidity */};
-const float STD[N_FEATURES] = {/* σ_Temperature, σ_Humidity */};
-const float WEIGHTS[N_FEATURES] = {/* W_Temperature, W_Humidity */};
-const float BIAS = 0; /* b */
+const int N_FEATURES = 2; // فقط الحرارة والرطوبة في المثال
 
-float X[N_FEATURES] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0}; // Input features
+// إحصائيات البيانات (قيم تجريبية افتراضية)
+const float MEAN[N_FEATURES] = {25.0, 60.0}; // المتوسط
+const float STD[N_FEATURES] = {5.0, 10.0};   // الانحراف المعياري
+
+// الأوزان والانحياز (افتراضية كمثال)
+const float WEIGHTS[N_FEATURES] = {0.3, -0.2};
+const float BIAS = 0.5;
+
+float X[N_FEATURES];
 
 void setup()
 {
   Serial.begin(9600);
-  Serial.println(F("DHTxx test!"));
+  Serial.println(F("DHT22 test + ML model!"));
   dht.begin();
 }
 
@@ -23,47 +27,40 @@ void loop()
 {
   delay(2000);
 
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
   float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
   float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  float f = dht.readTemperature(true);
 
-  // add data to input array
-  X[0] = t;
-  X[1] = h;
-
-  // Check if any reads failed and exit early (to try again).
-  if (isnan(h) || isnan(t) || isnan(f))
+  if (isnan(h) || isnan(t))
   {
     Serial.println(F("Failed to read from DHT sensor!"));
     return;
   }
 
-  // TODO: Add code to standardize the inputs
+  X[0] = t;
+  X[1] = h;
 
-  // TODO: Add code to compute the output of wx + b
+  // 1️⃣ توحيد القيم (Standardization)
+  float X_std[N_FEATURES];
+  for (int i = 0; i < N_FEATURES; i++)
+  {
+    X_std[i] = (X[i] - MEAN[i]) / STD[i];
+  }
 
-  // TODO: Add code to apply the sigmoid function
+  // 2️⃣ حساب wx + b
+  float linear = BIAS;
+  for (int i = 0; i < N_FEATURES; i++)
+  {
+    linear += WEIGHTS[i] * X_std[i];
+  }
 
-  // TODO: Add code to print the result to the serial monitor
+  // 3️⃣ تطبيق دالة sigmoid
+  float sigmoid = 1.0 / (1.0 + exp(-linear));
 
-  // Compute heat index in Fahrenheit (the default)
-  // float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
-  // float hic = dht.computeHeatIndex(t, h, false);
-
-  Serial.print("Humidity: ");
-  Serial.print(h);
-  Serial.print("%  Tempeature: ");
+  // 4️⃣ طباعة النتائج
+  Serial.print("Temp: ");
   Serial.print(t);
-  Serial.print("°C ");
-  Serial.println(f);
-  // Serial.print(F("°F  Heat index: "));
-  // Serial.print(hic);
-  // Serial.print(F("°C "));
-  // Serial.print(hif);
-  // Serial.println(F("°F"));
+  Serial.print("°C  Humidity: ");
+  Serial.print(h);
+  Serial.print("%  -> Model Output: ");
+  Serial.println(sigmoid, 4); // 4 منازل عشرية
 }

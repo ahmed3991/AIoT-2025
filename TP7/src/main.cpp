@@ -3,7 +3,7 @@
 #include <LiquidCrystal_I2C.h>
 #include "image_list.h" // the test images
 #include "label_data.h" // label names
-#include "model_data.h" // TODO: implemet your model file
+#include "model_data.h" // generated model file
 #include <vector>
 #include <random>
 
@@ -32,7 +32,8 @@ int buttonState = 0;
 bool takeNewPicture = false;
 
 // Define memory for tensors
-// TODO: Define the TENSOR_ARENA_SIZE and declare the tensor_arena array.
+constexpr size_t TENSOR_ARENA_SIZE = 93 * 1024;
+alignas(16) static uint8_t tensor_arena[TENSOR_ARENA_SIZE];
 
 const int MODEL_INPUT_WIDTH = 28;
 const int MODEL_INPUT_HEIGHT = 28;
@@ -121,7 +122,13 @@ void setup()
     }
 
     // Create interpreter
-    // TODO: Initialize the TFLite MicroInterpreter.
+    interpreter = new tflite::MicroInterpreter(model, resolver, tensor_arena, TENSOR_ARENA_SIZE);
+    if (!interpreter)
+    {
+        Serial.println("Failed to create interpreter!");
+        while (1)
+            ;
+    }
 
     TfLiteStatus allocate_status = interpreter->AllocateTensors();
     if (allocate_status != kTfLiteOk)
@@ -190,19 +197,28 @@ void loop()
         }
 
         // Copy the converted image into input tensor
-        // TODO: Copy the converted image data into the input tensor.
+        memcpy(input->data.int8, model_input_data, MODEL_INPUT_SIZE);
 
         // Free the dynamically allocated memory
         free(model_input_data);
 
         // Run inference
-        // TODO: Invoke the interpreter to run inference.
+        if (interpreter->Invoke() != kTfLiteOk)
+        {
+            takeNewPicture = true;
+            lcd.setCursor(0, 1);
+            lcd.print("Failed Inference");
+            lcd.print("    "); // clear any leftover characters
+            Serial.println("Inference failed!");
+            while (1)
+                ;
+        }
 
         Serial.printf("Free heap after inference: %d bytes\n", ESP.getFreeHeap());
         Serial.printf("Free PSRAM after inference: %d bytes\n", ESP.getFreePsram());
 
         // Print output values
-        Serial.println("✅ Inference successful! Output values:");
+        Serial.println("Inference successful! Output values:");
         for (int i = 0; i < output->bytes; i++)
         {
             Serial.print(output->data.int8[i]);
@@ -222,7 +238,20 @@ void loop()
             }
         }
 
-        // TODO: Print the predicted class index and name, and compare with the true class.
+        Serial.print("Predicted class index: ");
+        Serial.println(max_idx);
+        Serial.print("Predicted class name: ");
+        Serial.println(class_names[max_idx]);
+
+        Serial.print("True class index: ");
+        Serial.println(label_list[image_index - 1]);
+        Serial.print("True class name: ");
+        Serial.println(class_names[label_list[image_index - 1]]);
+        // Update LCD with predicted class
+        lcd.setCursor(0, 1);
+        lcd.print("Class:");
+        lcd.print(class_names[max_idx]);
+        lcd.print("   "); // clear any leftover characters
 
         takeNewPicture = true;
     }

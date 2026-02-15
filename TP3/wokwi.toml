@@ -1,6 +1,5 @@
 [wokwi]
 version = 1
-mcu = "esp32"
 elf = ".pio/build/uno/firmware.elf"
 firmware = ".pio/build/uno/firmware.hex"
 

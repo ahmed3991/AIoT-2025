@@ -1,19 +1,23 @@
 // TP3 - Logistic Regression fire alarm on the Arduino Uno (Wokwi)
-// The model (StandardScaler + LogisticRegression) was trained in Python on the 2 features the DHT22 measures,
-// Temperature and Humidity. Its parameters are printed by tools/export_lr_params.py.
+// The model is the LR-Pipeline trained in TP2 (StandardScaler + LogisticRegression on the 12 sensor features,
+// models/LR-Pipeline.pkl). Its parameters are printed by tools/export_lr_params.py.
 #include <math.h>
 #include "DHT.h"
 #define DHTPIN 2      // Digital pin connected to the DHT sensor
 #define DHTTYPE DHT22 // DHT 22  (AM2302), AM2321
 DHT dht(DHTPIN, DHTTYPE);
 
-// ---- Model parameters (feature 0 = Temperature in C, feature 1 = Humidity in %) ----
-const int N_FEATURES = 2;
-const float MEAN[N_FEATURES] = {15.9531155, 48.5743027};     // mu_Temperature, mu_Humidity
-const float STD[N_FEATURES] = {14.3580389, 8.82118797};      // sigma_Temperature, sigma_Humidity
-const float WEIGHTS[N_FEATURES] = {-0.208676055, 0.96797812};  // W_Temperature, W_Humidity
-const float BIAS = 0.969380438;                               // b
-const float THRESHOLD = 0.5;                                  // same decision rule as Pipeline.predict()
+// ---- Model parameters, in the training order of the features:
+// Temperature_C, Humidity_%, TVOC_ppb, eCO2_ppm, Raw H2, Raw Ethanol, Pressure_hPa, PM1.0, PM2.5, NC0.5, NC1.0, NC2.5
+const int N_FEATURES = 12;
+const float MEAN[N_FEATURES] = {15.9531155, 48.5743027, 1922.8844, 667.743896, 12942.3008, 19754.25, 938.631958, 100.887283, 186.073914, 490.209259, 205.457794, 81.3197556};
+const float STD[N_FEATURES] = {14.3580389, 8.82118797, 7755.89502, 1903.78223, 271.16861, 606.975952, 1.32451439, 925.303528, 1991.52783, 4259.41553, 2232.48486, 1095.29004};
+const float WEIGHTS[N_FEATURES] = {-1.10630012, 1.37815046, -18.2296009, 5.91924238, 3.35154843, -7.89639568, -2.42789745, -0.330777943, -0.19455418, -0.454262137, -0.184319511, -0.0682086498};
+const float BIAS = -0.384436756;
+const float THRESHOLD = 0.5; // same decision rule as Pipeline.predict()
+
+// Input features: the DHT22 replaces X[0] (Temperature) and X[1] (Humidity); the 10 other sensors keep these values
+float X[N_FEATURES] = {20.0, 57.36, 0, 400, 12306, 18520, 939.735, 0.0, 0.0, 0.0, 0.0, 0.0};
 
 // x_scaled = (x_raw - mu) / sigma
 float standardize(float x_raw, int idx)
@@ -61,10 +65,16 @@ void loop()
     return;
   }
 
-  // 2. Standardize, in the training order: Temperature, then Humidity
+  // add data to input array (feature 0 = Temperature, feature 1 = Humidity)
+  X[0] = t;
+  X[1] = h;
+
+  // 2. Standardize every feature with the mean and std of the TP2 scaler
   float x_scaled[N_FEATURES];
-  x_scaled[0] = standardize(t, 0);
-  x_scaled[1] = standardize(h, 1);
+  for (int i = 0; i < N_FEATURES; i++)
+  {
+    x_scaled[i] = standardize(X[i], i);
+  }
 
   // 3. Predict P(fire)
   float y_pred = predict(x_scaled);

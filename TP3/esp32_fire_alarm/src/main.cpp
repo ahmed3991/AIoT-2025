@@ -48,6 +48,9 @@ void setup() {
   pinMode(PIN_LED_FIRE, OUTPUT);
   pinMode(PIN_LED_OK, OUTPUT);
   pinMode(PIN_BUZZER, OUTPUT);
+  // tone() attaches the buzzer to LEDC channel 0 and reads its duty first; configuring that channel here
+  // initialises the LEDC driver, so the first beep no longer logs "LEDC is not initialized"
+  ledcSetup(0, 1000, 10);
   delay(200);
   Serial.println("\n=== ESP32 Fire Alarm - " MODEL_NAME " ===");
   benchmark();

@@ -1,4 +1,3 @@
-.pio
-include
-lib
-test
+.pio/
+.vscode/
+.DS_Store

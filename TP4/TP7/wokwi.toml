@@ -1,0 +1,13 @@
+[wokwi]
+version = 1
+firmware = ".pio/build/seeed_xiao_esp32s3/firmware.bin"
+elf = ".pio/build/seeed_xiao_esp32s3/firmware.elf"
+
+[[wokwi.serial]]
+baud = 115200
+
+[connections.phantomio]
+# Enable PhantomIO for serial and telemetry
+enabled = true
+port = "serial"
+

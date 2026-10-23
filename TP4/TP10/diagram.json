@@ -1,0 +1,73 @@
+{
+    "version": 1,
+    "author": "AIoT2025-TP10",
+    "editor": "wokwi",
+    "parts": [
+        {
+            "type": "board-esp32-devkit-c-v4",
+            "id": "esp",
+            "top": 0,
+            "left": 0,
+            "attrs": {
+                "label": "ESP32 DevKit",
+                "chip": "esp32"
+            }
+        },
+        {
+            "type": "wokwi-lcd1602",
+            "id": "lcd1",
+            "top": -140,
+            "left": -200,
+            "attrs": {
+                "pins": "i2c"
+            }
+        }
+    ],
+    "connections": [
+        [
+            "esp:TX",
+            "$serialMonitor:RX",
+            "",
+            []
+        ],
+        [
+            "esp:RX",
+            "$serialMonitor:TX",
+            "",
+            []
+        ],
+        [
+            "lcd1:VCC",
+            "esp:3V3",
+            "red",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "lcd1:GND",
+            "esp:GND.1",
+            "black",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "lcd1:SDA",
+            "esp:21",
+            "green",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "lcd1:SCL",
+            "esp:22",
+            "blue",
+            [
+                "v0"
+            ]
+        ]
+    ],
+    "dependencies": {}
+}

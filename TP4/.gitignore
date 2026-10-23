@@ -1,4 +1,13 @@
+<<<<<<< HEAD
+venv
+__pycache__
+
+
+
+.pio/
+=======
 .pio
 include
 lib
 test
+>>>>>>> 655faf4 (Complete AIoT TP4 project)

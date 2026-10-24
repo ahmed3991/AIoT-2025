@@ -16,6 +16,43 @@
             "top": -201.3,
             "left": 23.4,
             "attrs": {}
+        },
+        {
+            "type": "wokwi-led",
+            "id": "led_normal",
+            "top": -176.4,
+            "left": 186.2,
+            "attrs": { "color": "green", "label": "normal" }
+        },
+        {
+            "type": "wokwi-led",
+            "id": "led_fire",
+            "top": -176.4,
+            "left": 243.8,
+            "attrs": { "color": "red", "label": "FIRE" }
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "r_normal",
+            "top": -91.2,
+            "left": 172.25,
+            "rotate": 90,
+            "attrs": { "value": "220" }
+        },
+        {
+            "type": "wokwi-resistor",
+            "id": "r_fire",
+            "top": -91.2,
+            "left": 229.85,
+            "rotate": 90,
+            "attrs": { "value": "220" }
+        },
+        {
+            "type": "wokwi-buzzer",
+            "id": "bz1",
+            "top": -170.4,
+            "left": 309,
+            "attrs": { "volume": "0.1" }
         }
     ],
     "connections": [
@@ -44,7 +81,15 @@
             [
                 "v0"
             ]
-        ]
+        ],
+        [ "uno:4", "r_normal:2", "green", [] ],
+        [ "r_normal:1", "led_normal:A", "green", [] ],
+        [ "led_normal:C", "uno:GND.1", "black", [] ],
+        [ "uno:5", "r_fire:2", "orange", [] ],
+        [ "r_fire:1", "led_fire:A", "orange", [] ],
+        [ "led_fire:C", "uno:GND.1", "black", [] ],
+        [ "uno:8", "bz1:2", "purple", [] ],
+        [ "bz1:1", "uno:GND.1", "black", [] ]
     ],
     "dependencies": {}
 }
